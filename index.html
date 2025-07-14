@@ -88,6 +88,31 @@
     let processedFiles = [];
     let isMultipleFiles = false;
 
+    // URL query parameter utilities
+    function getQueryParam(name) {
+      const urlParams = new URLSearchParams(window.location.search);
+      return urlParams.get(name);
+    }
+
+    function setQueryParam(name, value) {
+      const url = new URL(window.location);
+      url.searchParams.set(name, value);
+      window.history.replaceState({}, '', url);
+    }
+
+    // Initialize mode from URL query parameter on page load
+    function initializeModeFromURL() {
+      const modeFromURL = getQueryParam('mode');
+      if (modeFromURL === 'upload') {
+        document.querySelector('input[name="mode"][value="upload"]').checked = true;
+        toggleInputMode();
+      } else {
+        // Default to paste mode if no valid query parameter
+        document.querySelector('input[name="mode"][value="paste"]').checked = true;
+        setQueryParam('mode', 'paste');
+      }
+    }
+
     function toggleInputMode() {
       const mode = document.querySelector('input[name="mode"]:checked').value;
       const pasteContainer = document.getElementById("pasteContainer");
@@ -100,6 +125,9 @@
         pasteContainer.style.display = "none";
         uploadContainer.style.display = "block";
       }
+      
+      // Update URL query parameter
+      setQueryParam('mode', mode);
       
       // Reset file tracking when switching modes
       if (mode === "paste") {
@@ -368,6 +396,11 @@
       }
       return newObj;
     }
+
+    // Initialize mode from URL when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeModeFromURL();
+    });
   </script>
 </body>
 </html>
