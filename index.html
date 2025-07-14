@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8" />
   <title>kubectl-neat-for-web</title>
-  <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
+  <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800">
@@ -37,7 +38,7 @@
       <textarea id="input" rows="10" class="w-full p-3 border rounded shadow" placeholder="Paste kubectl YAML here..."></textarea>
     </div>
 
-    <div id="uploadContainer" class="mb-4 hidden">
+    <div id="uploadContainer" class="mb-4" style="display: none;">
       <label class="block font-semibold mb-2">Upload .yaml/.yml files or folders:</label>
       <div class="space-y-2">
         <div>
@@ -58,6 +59,20 @@
     <div>
       <label class="block font-semibold mb-2">Neatened Output:</label>
       <textarea id="output" rows="15" class="w-full p-3 border rounded shadow bg-gray-50" placeholder="Result appears here..."></textarea>
+      
+      <div id="downloadSection" class="mt-4" style="display: none;">
+        <div class="flex flex-wrap gap-2">
+          <button id="downloadSingle" onclick="downloadSingleFile()" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold">
+            📄 Download as YAML
+          </button>
+          <button id="downloadMultiple" onclick="downloadMultipleFiles()" class="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 font-semibold" style="display: none;">
+            📁 Download Individual Files
+          </button>
+          <button id="downloadZip" onclick="downloadAsZip()" class="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 font-semibold" style="display: none;">
+            🗜️ Download as ZIP
+          </button>
+        </div>
+      </div>
     </div>
 
     <footer class="text-center mt-8 text-sm text-gray-500">
@@ -69,10 +84,28 @@
   </div>
 
   <script>
+    // Global variables to track processed files
+    let processedFiles = [];
+    let isMultipleFiles = false;
+
     function toggleInputMode() {
       const mode = document.querySelector('input[name="mode"]:checked').value;
-      document.getElementById("pasteContainer").classList.toggle("hidden", mode !== "paste");
-      document.getElementById("uploadContainer").classList.toggle("hidden", mode !== "upload");
+      const pasteContainer = document.getElementById("pasteContainer");
+      const uploadContainer = document.getElementById("uploadContainer");
+      
+      if (mode === "paste") {
+        pasteContainer.style.display = "block";
+        uploadContainer.style.display = "none";
+      } else {
+        pasteContainer.style.display = "none";
+        uploadContainer.style.display = "block";
+      }
+      
+      // Reset file tracking when switching modes
+      if (mode === "paste") {
+        processedFiles = [];
+        isMultipleFiles = false;
+      }
     }
 
     function processFiles(files) {
@@ -86,12 +119,23 @@
         return;
       }
 
+      // Reset tracking
+      processedFiles = [];
+      isMultipleFiles = yamlFiles.length > 1;
+
       let combinedContent = '';
       let processedCount = 0;
       
       yamlFiles.forEach((file, index) => {
         const reader = new FileReader();
         reader.onload = function (e) {
+          // Store individual file info
+          processedFiles.push({
+            name: file.name,
+            originalContent: e.target.result,
+            path: file.webkitRelativePath || file.name
+          });
+
           if (combinedContent && e.target.result.trim()) {
             combinedContent += '\n---\n';
           }
@@ -125,16 +169,170 @@
     function neat() {
       const inputText = document.getElementById("input").value;
       let output = "";
+      let processedDocuments = [];
 
       try {
-        const documents = jsyaml.loadAll(inputText);
-        const cleanedDocs = documents.map(doc => stripFields(doc));
-        output = cleanedDocs.map(doc => jsyaml.dump(doc, { noRefs: true })).join('---\n');
+        // Try different YAML library global names
+        let yamlLib = null;
+        if (typeof jsyaml !== 'undefined') {
+          yamlLib = jsyaml;
+        } else if (typeof jsYAML !== 'undefined') {
+          yamlLib = jsYAML;
+        } else if (typeof window.jsyaml !== 'undefined') {
+          yamlLib = window.jsyaml;
+        } else if (typeof window.jsYAML !== 'undefined') {
+          yamlLib = window.jsYAML;
+        }
+
+        if (yamlLib) {
+          if (processedFiles.length > 0) {
+            // Process each file individually to maintain file structure
+            processedFiles.forEach(file => {
+              try {
+                const documents = yamlLib.loadAll(file.originalContent);
+                const cleanedDocs = documents.map(doc => stripFields(doc));
+                const cleanedYaml = cleanedDocs.map(doc => yamlLib.dump(doc, { noRefs: true })).join('---\n');
+                
+                processedDocuments.push({
+                  name: file.name,
+                  path: file.path,
+                  content: cleanedYaml
+                });
+              } catch (err) {
+                console.error(`Error processing file ${file.name}:`, err);
+                processedDocuments.push({
+                  name: file.name,
+                  path: file.path,
+                  content: `# Error processing file: ${err.message}`
+                });
+              }
+            });
+            
+            // Combine all for display
+            output = processedDocuments.map(doc => doc.content).join('\n---\n');
+          } else {
+            // Single paste mode
+            const documents = yamlLib.loadAll(inputText);
+            const cleanedDocs = documents.map(doc => stripFields(doc));
+            output = cleanedDocs.map(doc => yamlLib.dump(doc, { noRefs: true })).join('---\n');
+            
+            processedDocuments = [{
+              name: 'kubectl-neat-output.yaml',
+              path: 'kubectl-neat-output.yaml',
+              content: output
+            }];
+          }
+        } else {
+          // Fallback: Simple text processing for demo purposes
+          output = inputText
+            .replace(/\s+status:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove status sections
+            .replace(/\s+creationTimestamp:.*$/gm, '') // Remove creationTimestamp
+            .replace(/\s+resourceVersion:.*$/gm, '') // Remove resourceVersion
+            .replace(/\s+uid:.*$/gm, '') // Remove uid
+            .replace(/\s+generation:.*$/gm, '') // Remove generation
+            .replace(/\s+managedFields:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove managedFields
+            .replace(/\n\s*\n/g, '\n') // Remove empty lines
+            .trim();
+          
+          processedDocuments = [{
+            name: 'kubectl-neat-output.yaml',
+            path: 'kubectl-neat-output.yaml',
+            content: output
+          }];
+          
+          output += '\n\n# Note: Using fallback text processing. For full YAML parsing, ensure internet connection.';
+        }
       } catch (err) {
         output = "❌ Error parsing YAML: " + err.message;
       }
 
       document.getElementById("output").value = output;
+      
+      // Show download section and update buttons
+      showDownloadOptions(processedDocuments);
+    }
+
+    function showDownloadOptions(processedDocuments) {
+      const downloadSection = document.getElementById("downloadSection");
+      const downloadMultiple = document.getElementById("downloadMultiple");
+      const downloadZip = document.getElementById("downloadZip");
+      
+      downloadSection.style.display = "block";
+      
+      // Store processed documents globally for download functions
+      window.currentProcessedDocuments = processedDocuments;
+      
+      if (processedDocuments.length > 1) {
+        downloadMultiple.style.display = "inline-block";
+        downloadZip.style.display = "inline-block";
+      } else {
+        downloadMultiple.style.display = "none";
+        downloadZip.style.display = "none";
+      }
+    }
+
+    function downloadSingleFile() {
+      const output = document.getElementById("output").value;
+      if (!output || output.includes("❌ Error")) {
+        alert("No valid output to download");
+        return;
+      }
+      
+      const fileName = window.currentProcessedDocuments && window.currentProcessedDocuments.length === 1 
+        ? window.currentProcessedDocuments[0].name 
+        : 'kubectl-neat-output.yaml';
+      
+      downloadFile(output, fileName);
+    }
+
+    function downloadMultipleFiles() {
+      if (!window.currentProcessedDocuments || window.currentProcessedDocuments.length <= 1) {
+        alert("No multiple files to download");
+        return;
+      }
+      
+      window.currentProcessedDocuments.forEach(doc => {
+        downloadFile(doc.content, doc.name);
+      });
+    }
+
+    async function downloadAsZip() {
+      if (!window.currentProcessedDocuments || window.currentProcessedDocuments.length <= 1) {
+        alert("No multiple files to download as ZIP");
+        return;
+      }
+      
+      try {
+        const zip = new JSZip();
+        
+        window.currentProcessedDocuments.forEach(doc => {
+          // Use the original path structure if available
+          const filePath = doc.path || doc.name;
+          zip.file(filePath, doc.content);
+        });
+        
+        const content = await zip.generateAsync({type: "blob"});
+        const fileName = "kubectl-neat-output.zip";
+        
+        const url = URL.createObjectURL(content);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        alert("Error creating ZIP file: " + err.message);
+      }
+    }
+
+    function downloadFile(content, fileName) {
+      const blob = new Blob([content], { type: 'text/yaml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     function stripFields(obj) {
