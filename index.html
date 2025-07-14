@@ -6,122 +6,17 @@
   <script src="https://unpkg.com/js-yaml@4.1.0/dist/js-yaml.min.js"></script>
   <script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <style>
-    .enhanced-editor {
-      position: relative;
-      border: 1px solid #d1d5db;
-      border-radius: 0.375rem;
-      background: white;
-      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Monaco', monospace;
-      font-size: 14px;
-      overflow: hidden;
-    }
-    
-    .enhanced-editor.readonly {
-      background: #f8fafc;
-    }
-    
-    .editor-wrapper {
-      position: relative;
-      height: 100%;
-      display: flex;
-    }
-    
-    .line-numbers {
-      background: #f3f4f6;
-      border-right: 1px solid #e5e7eb;
-      padding: 8px 8px;
-      font-size: 12px;
-      line-height: 20px;
-      color: #6b7280;
-      user-select: none;
-      width: 50px;
-      text-align: right;
-      white-space: pre;
-      overflow: hidden;
-    }
-    
-    .editor-content {
-      flex: 1;
-      position: relative;
-      overflow: hidden;
-    }
-    
-    .editor-textarea {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      padding: 8px 12px;
-      border: none;
-      outline: none;
-      background: transparent;
-      color: transparent;
-      caret-color: #374151;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: 20px;
-      resize: none;
-      z-index: 2;
-      white-space: pre;
-      overflow-wrap: break-word;
-      overflow: auto;
-    }
-    
-    .editor-highlight {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      padding: 8px 12px;
-      border: none;
-      background: transparent;
-      font-family: inherit;
-      font-size: inherit;
-      line-height: 20px;
-      overflow: auto;
-      pointer-events: none;
-      z-index: 1;
-      white-space: pre;
-      overflow-wrap: break-word;
-      color: #374151;
-    }
-    
-    .enhanced-editor.readonly .editor-textarea {
-      color: #374151;
-      background: #f8fafc;
-      cursor: default;
-    }
-    
-    .enhanced-editor.readonly .editor-highlight {
-      background: #f8fafc;
-    }
-    
-    /* YAML Syntax Highlighting */
-    .yaml-key { color: #0066cc; font-weight: 600; }
-    .yaml-value { color: #059669; }
-    .yaml-string { color: #dc2626; }
-    .yaml-comment { color: #6b7280; font-style: italic; }
-    .yaml-number { color: #7c3aed; }
-    .yaml-boolean { color: #ea580c; font-weight: 600; }
-    .yaml-null { color: #6b7280; font-style: italic; }
-    .yaml-separator { color: #374151; }
-    .yaml-list-marker { color: #374151; font-weight: 600; }
-  </style>
 </head>
 <body class="bg-gray-100 min-h-screen text-gray-800">
 
   <div class="max-w-4xl mx-auto p-6">
     <h1 class="text-4xl font-bold text-center text-blue-700 mb-2">kubectl-neat-for-web</h1>
     <p class="text-center text-sm text-gray-600 mb-6">
-      🧹 A browser-based tool to clean up noisy <code>kubectl get ... -o yaml</code> outputs.
+      A browser-based tool to clean up noisy <code>kubectl get ... -o yaml</code> outputs.
     </p>
 
-    <div class="bg-yellow-100 border border-yellow-300 text-yellow-800 p-4 rounded mb-6 text-sm">
-      ⚠️ This tool runs entirely in your browser. No files are uploaded. Safe for local use!
+    <div class="bg-yellow-100 text-center border border-yellow-300 text-yellow-800 p-4 rounded mb-6 text-sm">
+      All processing happens locally in your browser. Your files never leave your device.
     </div>
 
     <div class="mb-4">
@@ -140,15 +35,7 @@
 
     <div id="pasteContainer" class="mb-4">
       <label class="block font-semibold mb-2">Paste YAML content:</label>
-      <div class="enhanced-editor" id="input-container" style="height: 250px;">
-        <div class="editor-wrapper">
-          <div class="line-numbers" id="input-line-numbers">1</div>
-          <div class="editor-content">
-            <pre class="editor-highlight" id="input-highlight"></pre>
-            <textarea id="input" class="editor-textarea" placeholder="# Paste your kubectl YAML here..."></textarea>
-          </div>
-        </div>
-      </div>
+      <textarea id="input" rows="10" class="w-full p-3 border rounded shadow" placeholder="Paste kubectl YAML here..."></textarea>
     </div>
 
     <div id="uploadContainer" class="mb-4" style="display: none;">
@@ -171,15 +58,7 @@
 
     <div>
       <label class="block font-semibold mb-2">Neatened Output:</label>
-      <div class="enhanced-editor readonly" id="output-container" style="height: 350px;">
-        <div class="editor-wrapper">
-          <div class="line-numbers" id="output-line-numbers">1</div>
-          <div class="editor-content">
-            <pre class="editor-highlight" id="output-highlight"></pre>
-            <textarea id="output" class="editor-textarea" readonly placeholder="# Results will appear here..."></textarea>
-          </div>
-        </div>
-      </div>
+      <textarea id="output" rows="15" class="w-full p-3 border rounded shadow bg-gray-50" placeholder="Result appears here..."></textarea>
       
       <div id="downloadSection" class="mt-4" style="display: none;">
         <div class="flex flex-wrap gap-2">
@@ -211,165 +90,6 @@
     // Global variables to track processed files
     let processedFiles = [];
     let isMultipleFiles = false;
-    
-    // Enhanced Editor instances
-    let inputEditor = null;
-    let outputEditor = null;
-    
-    // Enhanced YAML Editor implementation
-    class EnhancedYamlEditor {
-      constructor(containerId, readonly = false) {
-        this.textarea = document.getElementById(containerId);
-        this.highlight = document.getElementById(`${containerId}-highlight`);
-        this.lineNumbers = document.getElementById(`${containerId}-line-numbers`);
-        this.readonly = readonly;
-        
-        this.init();
-      }
-      
-      init() {
-        // Set up event listeners
-        this.textarea.addEventListener('input', () => this.handleInput());
-        this.textarea.addEventListener('scroll', () => this.handleScroll());
-        this.textarea.addEventListener('keydown', (e) => this.handleKeydown(e));
-        
-        // Initial highlight and line numbers
-        this.updateHighlight();
-        this.updateLineNumbers();
-      }
-      
-      handleInput() {
-        this.updateHighlight();
-        this.updateLineNumbers();
-      }
-      
-      handleScroll() {
-        this.highlight.scrollTop = this.textarea.scrollTop;
-        this.highlight.scrollLeft = this.textarea.scrollLeft;
-        this.lineNumbers.scrollTop = this.textarea.scrollTop;
-      }
-      
-      handleKeydown(e) {
-        if (this.readonly) return;
-        
-        // Handle tab key for proper indentation
-        if (e.key === 'Tab') {
-          e.preventDefault();
-          const start = this.textarea.selectionStart;
-          const end = this.textarea.selectionEnd;
-          const value = this.textarea.value;
-          
-          if (e.shiftKey) {
-            // Shift+Tab: remove indentation
-            const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-            const lineEnd = value.indexOf('\n', start);
-            const line = value.substring(lineStart, lineEnd === -1 ? value.length : lineEnd);
-            
-            if (line.startsWith('  ')) {
-              this.textarea.value = value.substring(0, lineStart) + line.substring(2) + value.substring(lineEnd === -1 ? value.length : lineEnd);
-              this.textarea.selectionStart = Math.max(lineStart, start - 2);
-              this.textarea.selectionEnd = Math.max(lineStart, end - 2);
-              this.updateHighlight();
-              this.updateLineNumbers();
-            }
-          } else {
-            // Tab: add indentation
-            this.textarea.value = value.substring(0, start) + '  ' + value.substring(end);
-            this.textarea.selectionStart = this.textarea.selectionEnd = start + 2;
-            this.updateHighlight();
-            this.updateLineNumbers();
-          }
-        }
-        
-        // Auto-indent on Enter
-        else if (e.key === 'Enter') {
-          const start = this.textarea.selectionStart;
-          const value = this.textarea.value;
-          const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-          const currentLine = value.substring(lineStart, start);
-          const indent = currentLine.match(/^(\s*)/)[1];
-          
-          // Add extra indent if line ends with colon
-          const extraIndent = currentLine.trim().endsWith(':') ? '  ' : '';
-          
-          setTimeout(() => {
-            const newStart = this.textarea.selectionStart;
-            this.textarea.value = value.substring(0, newStart) + indent + extraIndent + value.substring(newStart);
-            this.textarea.selectionStart = this.textarea.selectionEnd = newStart + indent.length + extraIndent.length;
-            this.updateHighlight();
-            this.updateLineNumbers();
-          }, 0);
-        }
-      }
-      
-      updateHighlight() {
-        const text = this.textarea.value;
-        this.highlight.innerHTML = this.highlightYaml(text);
-      }
-      
-      highlightYaml(text) {
-        return text
-          // Escape HTML
-          .replace(/&/g, '&amp;')
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          // Comments
-          .replace(/^(\s*)(#.*)$/gm, '$1<span class="yaml-comment">$2</span>')
-          // Keys (words followed by colon)
-          .replace(/^(\s*)([\w\-\.]+)(\s*:\s*)/gm, '$1<span class="yaml-key">$2</span><span class="yaml-separator">$3</span>')
-          // Quoted strings
-          .replace(/(["'])((?:\\.|(?!\1)[^\\])*)\1/g, '<span class="yaml-string">$1$2$1</span>')
-          // Numbers
-          .replace(/(\s|^|:)(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)(\s|$)/g, '$1<span class="yaml-number">$2</span>$3')
-          // Booleans
-          .replace(/(\s|^|:)(true|false|yes|no|on|off)(\s|$)/gi, '$1<span class="yaml-boolean">$2</span>$3')
-          // Null values
-          .replace(/(\s|^|:)(null|~)(\s|$)/gi, '$1<span class="yaml-null">$2</span>$3')
-          // List markers
-          .replace(/^(\s*)(-\s+)/gm, '$1<span class="yaml-list-marker">$2</span>')
-          // Document separators
-          .replace(/^(---|\.\.\.)$/gm, '<span class="yaml-separator">$1</span>')
-          // Values (simple ones not already highlighted)
-          .replace(/(:\s+)([^\s][^#\n]*?)(\s*(?:#|$))/gm, (match, prefix, value, suffix) => {
-            if (value.includes('<span')) return match; // Already highlighted
-            return prefix + '<span class="yaml-value">' + value + '</span>' + suffix;
-          });
-      }
-      
-      updateLineNumbers() {
-        const lines = this.textarea.value.split('\n');
-        const lineNumbersHtml = lines.map((_, index) => index + 1).join('\n');
-        this.lineNumbers.textContent = lineNumbersHtml;
-      }
-      
-      getValue() {
-        return this.textarea.value;
-      }
-      
-      setValue(value) {
-        this.textarea.value = value;
-        this.updateHighlight();
-        this.updateLineNumbers();
-      }
-    }
-    
-    // Initialize editors
-    function initializeEditors() {
-      inputEditor = new EnhancedYamlEditor('input', false);
-      outputEditor = new EnhancedYamlEditor('output', true);
-      
-      // Set initial content
-      inputEditor.setValue('# Paste your kubectl YAML here...');
-      outputEditor.setValue('# Results will appear here...');
-    }
-    
-    // Initialize editors when DOM is ready
-    document.addEventListener('DOMContentLoaded', function() {
-      setTimeout(() => {
-        initializeEditors();
-        initializeModeFromURL();
-      }, 100);
-    });
 
     // URL query parameter utilities
     function getQueryParam(name) {
@@ -455,20 +175,14 @@
           
           // Update input field when all files are processed
           if (processedCount === yamlFiles.length) {
-            // Update enhanced editor if available
-            if (inputEditor) {
-              inputEditor.setValue(combinedContent);
-            }
+            document.getElementById("input").value = combinedContent;
           }
         };
         reader.onerror = function() {
           console.error(`Error reading file: ${file.name}`);
           processedCount++;
           if (processedCount === yamlFiles.length) {
-            // Update enhanced editor if available
-            if (inputEditor) {
-              inputEditor.setValue(combinedContent);
-            }
+            document.getElementById("input").value = combinedContent;
           }
         };
         reader.readAsText(file);
@@ -484,15 +198,9 @@
     });
 
     function neat() {
-      // Get input from enhanced editor
-      const inputText = inputEditor ? inputEditor.getValue() : '';
+      const inputText = document.getElementById("input").value;
       let output = "";
       let processedDocuments = [];
-
-      if (!inputText.trim()) {
-        alert("Please paste some YAML content first");
-        return;
-      }
 
       try {
         // Try different YAML library global names
@@ -574,10 +282,7 @@
         output = "❌ Error parsing YAML: " + err.message;
       }
 
-      // Update output editor
-      if (outputEditor) {
-        outputEditor.setValue(output);
-      }
+      document.getElementById("output").value = output;
       
       // Show download section and update buttons
       showDownloadOptions(processedDocuments);
@@ -603,8 +308,7 @@
     }
 
     async function copyToClipboard() {
-      // Get output from enhanced editor
-      const output = outputEditor ? outputEditor.getValue() : '';
+      const output = document.getElementById("output").value;
       if (!output || output.includes("❌ Error")) {
         alert("No valid output to copy");
         return;
@@ -627,12 +331,8 @@
         }, 2000);
         
       } catch (err) {
-        // Fallback for older browsers - create a temporary textarea
-        const textarea = document.createElement('textarea');
-        textarea.value = output;
-        textarea.style.position = 'absolute';
-        textarea.style.left = '-9999px';
-        document.body.appendChild(textarea);
+        // Fallback for older browsers
+        const textarea = document.getElementById("output");
         textarea.select();
         textarea.setSelectionRange(0, 99999); // For mobile devices
         
@@ -654,15 +354,12 @@
           
         } catch (fallbackErr) {
           alert("Copy failed. Please manually select and copy the text.");
-        } finally {
-          document.body.removeChild(textarea);
         }
       }
     }
 
     function downloadSingleFile() {
-      // Get output from enhanced editor
-      const output = outputEditor ? outputEditor.getValue() : '';
+      const output = document.getElementById("output").value;
       if (!output || output.includes("❌ Error")) {
         alert("No valid output to download");
         return;
@@ -754,7 +451,10 @@
       return newObj;
     }
 
-    // Initialize mode from URL when page loads (moved to DOMContentLoaded above)
+    // Initialize mode from URL when page loads
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeModeFromURL();
+    });
   </script>
 </body>
 </html>
