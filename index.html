@@ -224,15 +224,20 @@
           }
         } else {
           // Fallback: Simple text processing for demo purposes
-          output = inputText
-            .replace(/\s+status:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove status sections
-            .replace(/\s+creationTimestamp:.*$/gm, '') // Remove creationTimestamp
-            .replace(/\s+resourceVersion:.*$/gm, '') // Remove resourceVersion
-            .replace(/\s+uid:.*$/gm, '') // Remove uid
-            .replace(/\s+generation:.*$/gm, '') // Remove generation
-            .replace(/\s+managedFields:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove managedFields
-            .replace(/\n\s*\n/g, '\n') // Remove empty lines
-            .trim();
+          const parts = inputText.split(/^---$/m).map(part => part.trim()).filter(part => part);
+          const cleanedParts = parts.map(part => 
+            part
+              .replace(/\s+status:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove status sections
+              .replace(/\s+creationTimestamp:.*$/gm, '') // Remove creationTimestamp
+              .replace(/\s+resourceVersion:.*$/gm, '') // Remove resourceVersion
+              .replace(/\s+uid:.*$/gm, '') // Remove uid
+              .replace(/\s+generation:.*$/gm, '') // Remove generation
+              .replace(/\s+managedFields:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove managedFields
+              .replace(/\n\s*\n/g, '\n') // Remove empty lines
+              .trim()
+          );
+          
+          output = cleanedParts.join('\n---\n');
           
           processedDocuments = [{
             name: 'kubectl-neat-output.yaml',
