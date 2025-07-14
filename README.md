@@ -7,6 +7,8 @@ A simple web-based version of [`kubectl-neat`](https://github.com/itaysk/kubectl
 > ✅ 100% client-side.  
 > ✅ Multi-document YAML (`---`) supported.
 
+screenshot: ![Screenshot](https://raw.githubusercontent.com/phamthainb/kubectl-neat-for-web/main/image.png)
+
 ---
 
 ## 🚀 Try It Now
