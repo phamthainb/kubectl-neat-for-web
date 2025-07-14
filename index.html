@@ -27,7 +27,7 @@
         </label>
         <label class="inline-flex items-center">
           <input type="radio" name="mode" value="upload" onchange="toggleInputMode()" class="mr-2" />
-          Upload YAML file
+          Upload YAML files/folders
         </label>
       </div>
     </div>
@@ -38,8 +38,17 @@
     </div>
 
     <div id="uploadContainer" class="mb-4 hidden">
-      <label class="block font-semibold mb-2">Upload .yaml/.yml file:</label>
-      <input type="file" id="fileInput" accept=".yaml,.yml" class="border p-2 rounded bg-white" />
+      <label class="block font-semibold mb-2">Upload .yaml/.yml files or folders:</label>
+      <div class="space-y-2">
+        <div>
+          <input type="file" id="fileInput" accept=".yaml,.yml" multiple class="border p-2 rounded bg-white w-full" />
+          <p class="text-sm text-gray-600 mt-1">Select multiple YAML files</p>
+        </div>
+        <div>
+          <input type="file" id="folderInput" webkitdirectory class="border p-2 rounded bg-white w-full" />
+          <p class="text-sm text-gray-600 mt-1">Select a folder containing YAML files</p>
+        </div>
+      </div>
     </div>
 
     <button onclick="neat()" class="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 font-semibold mb-6">
@@ -66,15 +75,51 @@
       document.getElementById("uploadContainer").classList.toggle("hidden", mode !== "upload");
     }
 
-    document.getElementById("fileInput").addEventListener("change", function (event) {
-      const file = event.target.files[0];
-      if (file) {
+    function processFiles(files) {
+      const yamlFiles = Array.from(files).filter(file => 
+        file.name.toLowerCase().endsWith('.yaml') || 
+        file.name.toLowerCase().endsWith('.yml')
+      );
+      
+      if (yamlFiles.length === 0) {
+        alert('No YAML files found in selection.');
+        return;
+      }
+
+      let combinedContent = '';
+      let processedCount = 0;
+      
+      yamlFiles.forEach((file, index) => {
         const reader = new FileReader();
         reader.onload = function (e) {
-          document.getElementById("input").value = e.target.result;
+          if (combinedContent && e.target.result.trim()) {
+            combinedContent += '\n---\n';
+          }
+          combinedContent += e.target.result;
+          processedCount++;
+          
+          // Update input field when all files are processed
+          if (processedCount === yamlFiles.length) {
+            document.getElementById("input").value = combinedContent;
+          }
+        };
+        reader.onerror = function() {
+          console.error(`Error reading file: ${file.name}`);
+          processedCount++;
+          if (processedCount === yamlFiles.length) {
+            document.getElementById("input").value = combinedContent;
+          }
         };
         reader.readAsText(file);
-      }
+      });
+    }
+
+    document.getElementById("fileInput").addEventListener("change", function (event) {
+      processFiles(event.target.files);
+    });
+
+    document.getElementById("folderInput").addEventListener("change", function (event) {
+      processFiles(event.target.files);
     });
 
     function neat() {
