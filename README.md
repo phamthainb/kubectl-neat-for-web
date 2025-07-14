@@ -23,7 +23,8 @@ A simple web-based version of [`kubectl-neat`](https://github.com/itaysk/kubectl
   - `metadata.creationTimestamp`
   - `resourceVersion`, `uid`, etc.
 - 📎 Supports multi-document YAML (`---`)
-- 📄 Paste content or upload `.yaml` / `.yml` file
+- 📄 Paste content or upload `.yaml` / `.yml` files (single or multiple)
+- 📁 Upload entire folders containing YAML files
 - ⚡ Instant preview in browser
 - 🛡 No backend or network dependency — fully static HTML
 
