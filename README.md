@@ -24,6 +24,10 @@ screenshot: ![Screenshot](https://raw.githubusercontent.com/phamthainb/kubectl-n
   - `metadata.managedFields`
   - `metadata.creationTimestamp`
   - `resourceVersion`, `uid`, etc.
+- 🔓 **NEW:** Optional base64 decoding for Kubernetes Secret data fields
+  - Toggle to decode Secret values for easier inspection
+  - Security warning to prevent accidental exposure
+  - Works with both full YAML parsing and fallback text processing
 - 📎 Supports multi-document YAML (`---`)
 - 📄 Paste content or upload `.yaml` / `.yml` files (single or multiple)
 - 📁 Upload entire folders containing YAML files

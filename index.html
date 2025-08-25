@@ -33,6 +33,17 @@
       </div>
     </div>
 
+    <div class="mb-4">
+      <label class="inline-flex items-center">
+        <input type="checkbox" id="decodeSecrets" class="mr-2" />
+        <span class="font-semibold">🔓 Decode Secret data fields</span>
+        <span class="text-sm text-gray-600 ml-2">(base64 decode for easier inspection)</span>
+      </label>
+      <div id="secretWarning" class="mt-2 p-3 bg-red-50 border border-red-200 rounded text-red-800 text-sm" style="display: none;">
+        ⚠️ <strong>Security Warning:</strong> Decoded secrets will be displayed in plain text. Ensure you're in a secure environment and avoid sharing this output.
+      </div>
+    </div>
+
     <div id="pasteContainer" class="mb-4">
       <label class="block font-semibold mb-2">Paste YAML content:</label>
       <textarea id="input" rows="10" class="w-full p-3 border rounded shadow" placeholder="Paste kubectl YAML here..."></textarea>
@@ -199,6 +210,7 @@
 
     function neat() {
       const inputText = document.getElementById("input").value;
+      const decodeSecrets = document.getElementById("decodeSecrets").checked;
       let output = "";
       let processedDocuments = [];
 
@@ -221,7 +233,7 @@
             processedFiles.forEach(file => {
               try {
                 const documents = yamlLib.loadAll(file.originalContent);
-                const cleanedDocs = documents.map(doc => stripFields(doc));
+                const cleanedDocs = documents.map(doc => stripFields(doc, decodeSecrets));
                 const cleanedYaml = cleanedDocs.map(doc => yamlLib.dump(doc, { noRefs: true })).join('---\n');
                 
                 processedDocuments.push({
@@ -244,7 +256,7 @@
           } else {
             // Single paste mode
             const documents = yamlLib.loadAll(inputText);
-            const cleanedDocs = documents.map(doc => stripFields(doc));
+            const cleanedDocs = documents.map(doc => stripFields(doc, decodeSecrets));
             output = cleanedDocs.map(doc => yamlLib.dump(doc, { noRefs: true })).join('---\n');
             
             processedDocuments = [{
@@ -256,8 +268,8 @@
         } else {
           // Fallback: Simple text processing for demo purposes
           const parts = inputText.split(/^---$/m).map(part => part.trim()).filter(part => part);
-          const cleanedParts = parts.map(part => 
-            part
+          const cleanedParts = parts.map(part => {
+            let cleaned = part
               .replace(/\s+status:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove status sections
               .replace(/\s+creationTimestamp:.*$/gm, '') // Remove creationTimestamp
               .replace(/\s+resourceVersion:.*$/gm, '') // Remove resourceVersion
@@ -265,8 +277,15 @@
               .replace(/\s+generation:.*$/gm, '') // Remove generation
               .replace(/\s+managedFields:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove managedFields
               .replace(/\n\s*\n/g, '\n') // Remove empty lines
-              .trim()
-          );
+              .trim();
+            
+            // Handle Secret decoding if enabled and this is a Secret
+            if (decodeSecrets && cleaned.includes('kind: Secret')) {
+              cleaned = decodeSecretData(cleaned);
+            }
+            
+            return cleaned;
+          });
           
           output = cleanedParts.join('\n---\n');
           
@@ -422,7 +441,7 @@
       URL.revokeObjectURL(url);
     }
 
-    function stripFields(obj) {
+    function stripFields(obj, decodeSecrets = false) {
       const skipMetadata = [
         "creationTimestamp", "resourceVersion", "selfLink",
         "uid", "generation", "managedFields"
@@ -431,6 +450,10 @@
       if (typeof obj !== "object" || obj === null) return obj;
 
       const newObj = Array.isArray(obj) ? [] : {};
+      
+      // Check if this is a Secret resource and we should decode it
+      const isSecret = obj.kind === "Secret" && decodeSecrets;
+      
       for (const key in obj) {
         if (
           key === "status" ||
@@ -440,20 +463,94 @@
             newObj[key] = {};
             for (const metaKey in obj[key]) {
               if (!skipMetadata.includes(metaKey)) {
-                newObj[key][metaKey] = stripFields(obj[key][metaKey]);
+                newObj[key][metaKey] = stripFields(obj[key][metaKey], decodeSecrets);
               }
             }
           }
+        } else if (key === "data" && isSecret && typeof obj[key] === "object") {
+          // Decode Secret data fields
+          newObj[key] = {};
+          for (const dataKey in obj[key]) {
+            try {
+              // Decode base64 values
+              const decodedValue = atob(obj[key][dataKey]);
+              newObj[key][dataKey] = decodedValue;
+            } catch (err) {
+              // If decoding fails, keep original value
+              newObj[key][dataKey] = obj[key][dataKey];
+            }
+          }
         } else if (key !== "status") {
-          newObj[key] = stripFields(obj[key]);
+          newObj[key] = stripFields(obj[key], decodeSecrets);
         }
       }
       return newObj;
     }
 
+    // Helper function for text-based secret decoding
+    function decodeSecretData(yamlText) {
+      const lines = yamlText.split('\n');
+      let inDataSection = false;
+      const result = [];
+      
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        if (line.trim() === 'data:') {
+          inDataSection = true;
+          result.push(line);
+          continue;
+        }
+        
+        if (inDataSection) {
+          // Check if we're still in the data section (indented line with key: value)
+          if (line.match(/^\s+[a-zA-Z0-9_-]+:\s*.+$/)) {
+            const match = line.match(/^(\s+)([a-zA-Z0-9_-]+):\s*(.+)$/);
+            if (match) {
+              const indent = match[1];
+              const key = match[2];
+              const value = match[3];
+              
+              try {
+                const decodedValue = atob(value);
+                result.push(`${indent}${key}: ${decodedValue}`);
+              } catch (err) {
+                // If decoding fails, keep original
+                result.push(line);
+              }
+            } else {
+              result.push(line);
+            }
+          } else if (line.trim() && !line.startsWith(' ')) {
+            // We've left the data section
+            inDataSection = false;
+            result.push(line);
+          } else {
+            result.push(line);
+          }
+        } else {
+          result.push(line);
+        }
+      }
+      
+      return result.join('\n');
+    }
+
     // Initialize mode from URL when page loads
     document.addEventListener('DOMContentLoaded', function() {
       initializeModeFromURL();
+      
+      // Add event listener for secret decoding checkbox
+      const decodeSecretsCheckbox = document.getElementById('decodeSecrets');
+      const secretWarning = document.getElementById('secretWarning');
+      
+      decodeSecretsCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+          secretWarning.style.display = 'block';
+        } else {
+          secretWarning.style.display = 'none';
+        }
+      });
     });
   </script>
 </body>
