@@ -468,16 +468,16 @@
             }
           }
         } else if (key === "data" && isSecret && typeof obj[key] === "object") {
-          // Decode Secret data fields
-          newObj[key] = {};
+          // Decode Secret data fields and output as stringData
+          newObj["stringData"] = {};
           for (const dataKey in obj[key]) {
             try {
               // Decode base64 values
               const decodedValue = atob(obj[key][dataKey]);
-              newObj[key][dataKey] = decodedValue;
+              newObj["stringData"][dataKey] = decodedValue;
             } catch (err) {
               // If decoding fails, keep original value
-              newObj[key][dataKey] = obj[key][dataKey];
+              newObj["stringData"][dataKey] = obj[key][dataKey];
             }
           }
         } else if (key !== "status") {
@@ -498,7 +498,7 @@
         
         if (line.trim() === 'data:') {
           inDataSection = true;
-          result.push(line);
+          result.push(line.replace('data:', 'stringData:'));
           continue;
         }
         
