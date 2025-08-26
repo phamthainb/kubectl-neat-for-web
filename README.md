@@ -24,8 +24,9 @@ screenshot: ![Screenshot](https://raw.githubusercontent.com/phamthainb/kubectl-n
   - `metadata.managedFields`
   - `metadata.creationTimestamp`
   - `resourceVersion`, `uid`, etc.
-- 🔓 **NEW:** Optional base64 decoding for Kubernetes Secret data fields
-  - Toggle to decode Secret values for easier inspection
+- 🔓 **NEW:** Kubernetes Secret decoding with `stringData` output
+  - Toggle to decode Secret base64 values for easier inspection
+  - Outputs decoded values under `stringData` field (matches kubectl apply format)
   - Security warning to prevent accidental exposure
   - Works with both full YAML parsing and fallback text processing
 - 📎 Supports multi-document YAML (`---`)
