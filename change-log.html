@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Changelog - kubectl-neat-for-web</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 min-h-screen text-gray-800">
+
+  <div class="max-w-4xl mx-auto p-6">
+    <h1 class="text-4xl font-bold text-center text-blue-700 mb-2">kubectl-neat-for-web</h1>
+    <p class="text-center text-sm text-gray-600 mb-4">
+      A browser-based tool to clean up noisy <code>kubectl get ... -o yaml</code> outputs.
+    </p>
+
+    <!-- Navigation -->
+    <nav class="text-center mb-6">
+      <div class="inline-flex bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        <a href="index.html" class="px-4 py-2 text-gray-600 hover:bg-gray-50 font-semibold transition-colors border-r border-gray-200">
+          🏠 Home
+        </a>
+        <a href="change-log.html" class="px-4 py-2 text-blue-600 bg-blue-50 font-semibold hover:bg-blue-100 transition-colors">
+          📋 Changelog
+        </a>
+      </div>
+    </nav>
+
+    <!-- Changelog Content -->
+    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <h2 class="text-3xl font-bold text-gray-800 mb-6">🔄 Changelog</h2>
+      
+      <div class="space-y-8">
+        <!-- Version 0.2.0 -->
+        <div class="border-l-4 border-blue-500 pl-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-2">v0.2.0 - 2024-12-15</h3>
+          <div class="space-y-3">
+            <div>
+              <h4 class="font-semibold text-green-700 mb-1">✨ Added</h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                <li>🔓 Secret decode support with <code class="bg-gray-100 px-1 rounded">stringData</code> output</li>
+                <li>📁 Upload entire folders containing YAML files</li>
+                <li>🗜️ ZIP download for multiple processed files</li>
+                <li>⚠️ Security warning for secret decoding feature</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold text-blue-700 mb-1">🔧 Changed</h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                <li>Improved UI for resource details and file operations</li>
+                <li>Enhanced fallback text processing when CDN resources are unavailable</li>
+                <li>Better handling of multi-document YAML files</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold text-purple-700 mb-1">🛠️ Fixed</h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                <li>Improved YAML parsing error handling</li>
+                <li>Better preservation of document structure in multi-file processing</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Version 0.1.1 -->
+        <div class="border-l-4 border-gray-400 pl-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-2">v0.1.1 - 2024-11-30</h3>
+          <div class="space-y-3">
+            <div>
+              <h4 class="font-semibold text-green-700 mb-1">✨ Added</h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                <li>📄 File upload support for single and multiple YAML files</li>
+                <li>📋 Copy to clipboard functionality</li>
+                <li>📄 Download processed YAML as file</li>
+              </ul>
+            </div>
+            <div>
+              <h4 class="font-semibold text-blue-700 mb-1">🔧 Changed</h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                <li>Enhanced UI with better mode switching</li>
+                <li>Improved responsive design for mobile devices</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- Version 0.1.0 -->
+        <div class="border-l-4 border-gray-400 pl-6">
+          <h3 class="text-xl font-bold text-gray-800 mb-2">v0.1.0 - 2024-11-15</h3>
+          <div class="space-y-3">
+            <div>
+              <h4 class="font-semibold text-green-700 mb-1">🚀 Initial Release</h4>
+              <ul class="list-disc list-inside text-gray-700 space-y-1 ml-4">
+                <li>✂️ Clean up verbose Kubernetes YAML outputs</li>
+                <li>🛡️ Remove noisy fields: <code class="bg-gray-100 px-1 rounded">status</code>, <code class="bg-gray-100 px-1 rounded">metadata.managedFields</code>, <code class="bg-gray-100 px-1 rounded">metadata.creationTimestamp</code></li>
+                <li>📎 Support for multi-document YAML with <code class="bg-gray-100 px-1 rounded">---</code> separators</li>
+                <li>🛡️ 100% client-side processing - no backend dependency</li>
+                <li>⚡ Instant preview in browser</li>
+                <li>📱 Static HTML application - works offline</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer class="text-center mt-8 text-sm text-gray-500">
+      Source on GitHub:
+      <a href="https://github.com/phamthainb/kubectl-neat-for-web" target="_blank" class="text-blue-500 hover:underline">
+        https://github.com/phamthainb/kubectl-neat-for-web
+      </a>
+    </footer>
+  </div>
+
+</body>
+</html>
