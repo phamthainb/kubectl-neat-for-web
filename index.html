@@ -314,6 +314,7 @@
               .replace(/\s+uid:.*$/gm, '') // Remove uid
               .replace(/\s+generation:.*$/gm, '') // Remove generation
               .replace(/\s+managedFields:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove managedFields
+              .replace(/\s+annotations:\s*[\s\S]*?(?=\n[a-zA-Z]|\n$|$)/g, '') // Remove annotations sections
               .replace(/\n\s*\n/g, '\n') // Remove empty lines
               .trim();
             
@@ -482,7 +483,7 @@
     function stripFields(obj, decodeSecrets = false) {
       const skipMetadata = [
         "creationTimestamp", "resourceVersion", "selfLink",
-        "uid", "generation", "managedFields"
+        "uid", "generation", "managedFields", "annotations"
       ];
 
       if (typeof obj !== "object" || obj === null) return obj;
